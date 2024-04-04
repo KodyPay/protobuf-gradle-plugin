@@ -47,8 +47,8 @@ class ExecutableLocator implements Named {
 
   private final String name
 
-  private Property<String> artifact
-  private Property<String> path
+  private final Property<String> artifact
+  private final Property<String> path
 
   private FileCollection artifactFiles
   private Provider<String> simplifiedArtifactName

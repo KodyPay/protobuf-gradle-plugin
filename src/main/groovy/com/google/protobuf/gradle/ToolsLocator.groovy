@@ -31,7 +31,6 @@ package com.google.protobuf.gradle
 import com.google.gradle.osdetector.OsDetector
 import groovy.transform.CompileStatic
 import org.gradle.api.NamedDomainObjectContainer
-import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.provider.Provider
@@ -97,7 +96,8 @@ class ToolsLocator {
 
   private void resolveLocator(Project project, ExecutableLocator locator) {
     // create a project configuration dependency for the artifact
-    NamedDomainObjectProvider<Configuration> config = project.configurations.register("protobufToolsLocator_${locator.name}") { Configuration conf ->
+    Provider<Configuration> config = project.configurations.register("protobufToolsLocator_${locator.name}") {
+      Configuration conf ->
       conf.visible = false
       conf.transitive = false
     }

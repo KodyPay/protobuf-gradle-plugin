@@ -13,7 +13,7 @@ plugins {
 }
 
 group = 'com.google.protobuf'
-version = '0.10.0-kody'
+version = '0.10.0-SNAPSHOT'
 
 ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
 
@@ -132,7 +132,7 @@ publishing {
 // The Gradle plugin portal doesn't allow signature files.
 if (!gradle.startParameter.taskNames.intersect(['publishPlugins'])) {
     signing {
-        useGpgCmd()
+        // useGpgCmd()
         required { isReleaseVersion }
         sign publishing.publications.pluginMaven
     }
