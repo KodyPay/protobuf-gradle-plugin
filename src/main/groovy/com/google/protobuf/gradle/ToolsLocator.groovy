@@ -35,6 +35,7 @@ import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
 import org.gradle.api.provider.Provider
 import org.gradle.api.provider.ProviderFactory
+import org.gradle.util.GradleVersion
 
 /**
  * Holds locations of all external executables, i.e., protoc and plugins.
@@ -105,7 +106,7 @@ class ToolsLocator {
     OsDetector osdetector = project.extensions.getByName("osdetector") as OsDetector
 
     Provider provider = providerFactory.provider {
-      List<String> parts = artifactParts(locator.artifact.get())
+      List<String> parts = artifactParts(locator.artifact)
       (groupId, artifact, version, classifier, extension) = [parts[0], parts[1], parts[2], parts[3], parts[4]]
       Map<String, String> notation = [
               group:groupId,
@@ -116,7 +117,11 @@ class ToolsLocator {
       ]
       notation
     }
-    project.dependencies.add(config.name, provider)
+    if (GradleVersion.current() < GradleVersion.version("6.7")) {
+      project.dependencies.add(config.name, provider.get())
+    } else {
+      project.dependencies.add(config.name, provider)
+    }
     locator.resolve(config.get(), provider.map {
       "$groupId:$artifact:$version".toString()
     })

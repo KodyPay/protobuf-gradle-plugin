@@ -87,8 +87,8 @@ class ExecutableLocator implements Named {
     this.path.set(path)
   }
 
-  Provider<String> getArtifact() {
-    return artifact
+  String getArtifact() {
+    return artifact.getOrNull()
   }
 
   String getPath() {
