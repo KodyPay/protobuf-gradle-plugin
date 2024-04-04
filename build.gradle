@@ -13,7 +13,7 @@ plugins {
 }
 
 group = 'com.google.protobuf'
-version = '0.9.5-SNAPSHOT'
+version = '0.10.0-kody'
 
 ext.isReleaseVersion = !version.endsWith("SNAPSHOT")
 
@@ -49,6 +49,15 @@ tasks.register('groovydocJar', Jar) {
     dependsOn groovydoc
     classifier = 'groovydoc'
     from groovydoc.destinationDir
+}
+
+tasks.withType(Zip) { task ->
+    task.doLast {
+        ant.checksum algorithm: 'md5', file: it.archivePath
+        ant.checksum algorithm: 'sha1', file: it.archivePath
+        ant.checksum algorithm: 'sha-256', file: it.archivePath, fileext: '.sha256'
+        ant.checksum algorithm: 'sha-512', file: it.archivePath, fileext: '.sha512'
+    }
 }
 
 codenarc {
@@ -122,10 +131,11 @@ publishing {
 
 // The Gradle plugin portal doesn't allow signature files.
 if (!gradle.startParameter.taskNames.intersect(['publishPlugins'])) {
-  signing {
-       required { isReleaseVersion }
-       sign publishing.publications.pluginMaven
-  }
+    signing {
+        useGpgCmd()
+        required { isReleaseVersion }
+        sign publishing.publications.pluginMaven
+    }
 }
 
 gradlePlugin {

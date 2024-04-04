@@ -31,8 +31,11 @@ package com.google.protobuf.gradle
 import com.google.gradle.osdetector.OsDetector
 import groovy.transform.CompileStatic
 import org.gradle.api.NamedDomainObjectContainer
+import org.gradle.api.NamedDomainObjectProvider
 import org.gradle.api.Project
 import org.gradle.api.artifacts.Configuration
+import org.gradle.api.provider.Provider
+import org.gradle.api.provider.ProviderFactory
 
 /**
  * Holds locations of all external executables, i.e., protoc and plugins.
@@ -43,6 +46,7 @@ class ToolsLocator {
   final ExecutableLocator protoc
   final NamedDomainObjectContainer<ExecutableLocator> plugins
 
+  private final ProviderFactory providerFactory
   static List<String> artifactParts(String artifactCoordinate) {
     String artifact
     String extension
@@ -64,8 +68,9 @@ class ToolsLocator {
   }
 
   ToolsLocator(Project project) {
-    protoc = new ExecutableLocator('protoc')
+    protoc = new ExecutableLocator('protoc', project.objects)
     plugins = project.container(ExecutableLocator)
+    providerFactory = project.providers
   }
 
   /**
@@ -76,15 +81,15 @@ class ToolsLocator {
    * spec, downloads the artifact, and point to the local path.
    */
   void resolve(Project project) {
-    if (protoc.artifact != null) {
+    if (protoc.hasArtifact()) {
       resolveLocator(project, protoc)
-    } else if (protoc.path == null) {
+    } else if (!protoc.hasPath()) {
       protoc.path = 'protoc'
     }
     for (ExecutableLocator pluginLocator in plugins) {
-      if (pluginLocator.artifact != null) {
+      if (pluginLocator.hasArtifact()) {
         resolveLocator(project, pluginLocator)
-      } else if (pluginLocator.path == null) {
+      } else if (!pluginLocator.hasPath()) {
         pluginLocator.path = "protoc-gen-${pluginLocator.name}"
       }
     }
@@ -92,22 +97,28 @@ class ToolsLocator {
 
   private void resolveLocator(Project project, ExecutableLocator locator) {
     // create a project configuration dependency for the artifact
-    Configuration config = project.configurations.create("protobufToolsLocator_${locator.name}") { Configuration conf ->
+    NamedDomainObjectProvider<Configuration> config = project.configurations.register("protobufToolsLocator_${locator.name}") { Configuration conf ->
       conf.visible = false
       conf.transitive = false
     }
     String groupId, artifact, version, classifier, extension
     OsDetector osdetector = project.extensions.getByName("osdetector") as OsDetector
-    List<String> parts = artifactParts(locator.artifact)
-    (groupId, artifact, version, classifier, extension) = [parts[0], parts[1], parts[2], parts[3], parts[4]]
-    Map<String, String> notation = [
-      group:groupId,
-      name:artifact,
-      version:version,
-      classifier:classifier ?: osdetector.classifier,
-      ext:extension ?: 'exe',
-    ]
-    project.dependencies.add(config.name, notation)
-    locator.resolve(config, "$groupId:$artifact:$version".toString())
+
+    Provider provider = providerFactory.provider {
+      List<String> parts = artifactParts(locator.artifact.get())
+      (groupId, artifact, version, classifier, extension) = [parts[0], parts[1], parts[2], parts[3], parts[4]]
+      Map<String, String> notation = [
+              group:groupId,
+              name:artifact,
+              version:version,
+              classifier:classifier ?: osdetector.classifier,
+              ext:extension ?: 'exe',
+      ]
+      notation
+    }
+    project.dependencies.add(config.name, provider)
+    locator.resolve(config.get(), provider.map {
+      "$groupId:$artifact:$version".toString()
+    })
   }
 }

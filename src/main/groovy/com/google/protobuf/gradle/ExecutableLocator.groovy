@@ -32,6 +32,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import org.gradle.api.Named
 import org.gradle.api.file.FileCollection
+import org.gradle.api.model.ObjectFactory
+import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
 
 /**
  * Locates an executable that can either be found locally or downloaded from
@@ -44,14 +47,16 @@ class ExecutableLocator implements Named {
 
   private final String name
 
-  private String artifact
-  private String path
+  private Property<String> artifact
+  private Property<String> path
 
   private FileCollection artifactFiles
-  private String simplifiedArtifactName
+  private Provider<String> simplifiedArtifactName
 
-  ExecutableLocator(String name) {
+  ExecutableLocator(String name, ObjectFactory objects) {
     this.name = name
+    artifact = objects.property(String)
+    path = objects.property(String)
   }
 
   @Override
@@ -64,42 +69,56 @@ class ExecutableLocator implements Named {
    * repositories. spec format: '<groupId>:<artifactId>:<version>'
    */
   void setArtifact(String spec) {
-    this.artifact = spec
-    this.path = null
+    this.artifact.set(spec)
+  }
+
+  void setArtifact(Provider<String> spec) {
+    this.artifact.set(spec)
   }
 
   /**
    * Specifies a local path.
    */
   void setPath(String path) {
-    this.path = path
-    this.artifact = null
+    this.path.set(path)
   }
 
-  String getArtifact() {
+  void setPath(Provider<String> path) {
+    this.path.set(path)
+  }
+
+  Provider<String> getArtifact() {
     return artifact
   }
 
   String getPath() {
-    return path
+    return path.getOrNull()
+  }
+
+  boolean hasArtifact() {
+    this.artifact.isPresent()
+  }
+
+  boolean hasPath() {
+    return path.isPresent()
   }
 
   @PackageScope
   FileCollection getArtifactFiles() {
-    Preconditions.checkState(path == null, 'Not artifact based')
+    Preconditions.checkState(path.getOrNull() == null, 'Not artifact based')
     Preconditions.checkState(artifactFiles != null, 'Not yet created resolved')
     return artifactFiles
   }
 
   @PackageScope
   String getSimplifiedArtifactName() {
-    Preconditions.checkState(path == null, 'Not artifact based')
-    Preconditions.checkState(simplifiedArtifactName != null, 'Not yet resolved')
-    return simplifiedArtifactName
+    Preconditions.checkState(path.getOrNull() == null, 'Not artifact based')
+    Preconditions.checkState(simplifiedArtifactName.getOrNull() != null, 'Not yet resolved')
+    return simplifiedArtifactName.getOrNull()
   }
 
   @PackageScope
-  void resolve(FileCollection artifactFiles, String simplifiedArtifactName) {
+  void resolve(FileCollection artifactFiles, Provider<String> simplifiedArtifactName) {
     this.artifactFiles = artifactFiles
     this.simplifiedArtifactName = simplifiedArtifactName
   }
